@@ -1,15 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
-export const Login = () => {
-  const [username, setUsername] = useState("");
+export const ResetPassword = () => {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
 
-  const URL = "http://localhost:8000/api/auth/login";
+  const URL = `http://localhost:8000/api/auth/reset-password/${token}`;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (password !== confirmPassword) {
+      setMessage("Passwords do not match");
+      return;
+    }
 
     try {
       const response = await fetch(`${URL}`, {
@@ -17,41 +25,26 @@ export const Login = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
+        body: JSON.stringify({ password }),
       });
 
       if (response.ok) {
-        console.log("Login Successful!");
-        navigate("/"); // Redirect to home page after successful login
+        setMessage("Password has been reset successfully");
+        setTimeout(() => navigate("/login"), 2000); // Redirect to login page after 2 seconds
       } else {
-        console.log("Login failed");
+        setMessage("Error resetting password");
       }
     } catch (error) {
-      console.log("Login failed");
+      setMessage("Error resetting password");
     }
   }
 
   return (
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <h2>Login</h2>
+        <h2>Reset Password</h2>
         <div style={styles.formGroup}>
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            id="username"
-            onChange={(e) => setUsername(e.target.value)}
-            value={username}
-            required
-            style={styles.input}
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label htmlFor="password">Password</label>
+          <label htmlFor="password">New Password</label>
           <input
             type="password"
             id="password"
@@ -61,26 +54,21 @@ export const Login = () => {
             style={styles.input}
           />
         </div>
-
-        <div style={styles.buttonContainer}>
-          <button type="submit" style={styles.button}>
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/forgot-password")}
-            style={styles.button}
-          >
-            Forgot Password?
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/signup")}
-            style={styles.button}
-          >
-            Go to Signup
-          </button>
+        <div style={styles.formGroup}>
+          <label htmlFor="confirmPassword">Confirm New Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            value={confirmPassword}
+            required
+            style={styles.input}
+          />
         </div>
+        <button type="submit" style={styles.button}>
+          Reset Password
+        </button>
+        {message && <p style={styles.message}>{message}</p>}
       </form>
     </div>
   );
@@ -111,10 +99,6 @@ const styles = {
     borderRadius: "4px",
     border: "1px solid #ccc",
   },
-  buttonContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-  },
   button: {
     padding: "10px 15px",
     borderRadius: "4px",
@@ -122,5 +106,9 @@ const styles = {
     backgroundColor: "#007BFF",
     color: "#fff",
     cursor: "pointer",
+  },
+  message: {
+    marginTop: "15px",
+    color: "#28a745",
   },
 };

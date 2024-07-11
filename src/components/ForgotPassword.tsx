@@ -1,57 +1,38 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export const Signup = () => {
-  const [username, setUsername] = useState("");
+export const ForgotPassword = () => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState("");
   const navigate = useNavigate();
-
-  const URL = "http://localhost:8000/api/auth/register";
+  const URL = "http://localhost:8000/api/auth/forget-password";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-
     try {
       const response = await fetch(`${URL}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          username,
-          email,
-          password,
-        }),
+        body: JSON.stringify({ email }),
       });
 
       if (response.ok) {
-        console.log("Signup Successful!");
-        navigate("/app");
+        const data = await response.json();
+        setMessage(data.msg);
       } else {
-        console.log("Signup failed");
+        setMessage("Error sending password reset email");
       }
     } catch (error) {
-      console.log("Signup failed");
+      setMessage("Error sending password reset email");
     }
   }
 
   return (
     <div style={styles.container}>
       <form onSubmit={handleSubmit} style={styles.form}>
-        <h2>Signup</h2>
-        <div style={styles.formGroup}>
-          <label htmlFor="username">Username</label>
-          <input
-            type="text"
-            id="username"
-            onChange={(e) => setUsername(e.target.value)}
-            value={username}
-            required
-            style={styles.input}
-          />
-        </div>
-
+        <h2>Forgot Password</h2>
         <div style={styles.formGroup}>
           <label htmlFor="email">Email</label>
           <input
@@ -63,31 +44,17 @@ export const Signup = () => {
             style={styles.input}
           />
         </div>
-
-        <div style={styles.formGroup}>
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            onChange={(e) => setPassword(e.target.value)}
-            value={password}
-            required
-            style={styles.input}
-          />
-        </div>
-
-        <div style={styles.buttonContainer}>
-          <button type="submit" style={styles.button}>
-            Signup
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            style={styles.button}
-          >
-            Go to Login
-          </button>
-        </div>
+        <button type="submit" style={styles.button}>
+          Send Reset Email
+        </button>
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          style={styles.button}
+        >
+          Go to Login
+        </button>
+        {message && <p style={styles.message}>{message}</p>}
       </form>
     </div>
   );
@@ -118,10 +85,6 @@ const styles = {
     borderRadius: "4px",
     border: "1px solid #ccc",
   },
-  buttonContainer: {
-    display: "flex",
-    justifyContent: "space-between",
-  },
   button: {
     padding: "10px 15px",
     borderRadius: "4px",
@@ -129,5 +92,9 @@ const styles = {
     backgroundColor: "#007BFF",
     color: "#fff",
     cursor: "pointer",
+  },
+  message: {
+    marginTop: "15px",
+    color: "#28a745",
   },
 };

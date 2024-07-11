@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendResetEmail = (email, token) => {
-  const resetLink = `http://localhost:8000/api/auth/reset-password/${token}`;
+  const resetLink = `http://localhost:5173/reset-password?token=${token}`;
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to: email,
