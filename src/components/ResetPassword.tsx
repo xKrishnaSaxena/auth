@@ -30,7 +30,7 @@ export const ResetPassword = () => {
 
       if (response.ok) {
         setMessage("Password has been reset successfully");
-        setTimeout(() => navigate("/login"), 2000); // Redirect to login page after 2 seconds
+        setTimeout(() => navigate("/"), 2000);
       } else {
         setMessage("Error resetting password");
       }

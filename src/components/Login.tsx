@@ -25,7 +25,7 @@ export const Login = () => {
 
       if (response.ok) {
         console.log("Login Successful!");
-        navigate("/"); // Redirect to home page after successful login
+        navigate("/app");
       } else {
         console.log("Login failed");
       }
