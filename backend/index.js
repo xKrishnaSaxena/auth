@@ -4,17 +4,10 @@ import bodyParser from "body-parser";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 
-dotenv.config(); // Ensure this is at the top
-
+dotenv.config();
 const app = express();
-
-// Connect Database
 connectDB();
-
-// Middleware
 app.use(bodyParser.json());
-
-// Routes
 app.use("/api/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;

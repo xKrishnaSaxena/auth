@@ -3,12 +3,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import dotenv from "dotenv";
-
+import { sendResetEmail } from "../config/nodemailer.js";
 dotenv.config();
 
 const router = express.Router();
 
-// User Registration
 router.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
 
@@ -29,28 +28,13 @@ router.post("/register", async (req, res) => {
 
     await user.save();
 
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    res.json({ username, email });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
   }
 });
 
-// User Login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
 
@@ -65,28 +49,13 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ msg: "Invalid Credentials" });
     }
 
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-
-    jwt.sign(
-      payload,
-      process.env.JWT_SECRET,
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.json({ token });
-      }
-    );
+    res.json({ username });
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
   }
 });
 
-// Forget Password
 router.post("/forget-password", async (req, res) => {
   const { email } = req.body;
 
@@ -105,11 +74,11 @@ router.post("/forget-password", async (req, res) => {
     jwt.sign(
       payload,
       process.env.JWT_SECRET,
-      { expiresIn: 3600 }, // 1 hour
+      { expiresIn: 3600 },
       (err, token) => {
         if (err) throw err;
-        // Here, we should send the token as a reset link via email
-        res.json({ token, msg: "Password reset token generated" });
+        sendResetEmail(email, token);
+        res.json({ msg: "Password reset token sent to email" });
       }
     );
   } catch (err) {
@@ -118,4 +87,25 @@ router.post("/forget-password", async (req, res) => {
   }
 });
 
+router.post("/reset-password/:token", async (req, res) => {
+  const { token } = req.params;
+  const { password } = req.body;
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let user = await User.findById(decoded.user.id);
+    if (!user) {
+      return res.status(400).json({ msg: "Invalid token" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(password, salt);
+
+    await user.save();
+    res.json({ msg: "Password has been reset successfully" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send("Server error");
+  }
+});
 export default router;
