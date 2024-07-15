@@ -1,0 +1,90 @@
+import express from "express";
+import Post from "../models/Post.js";
+import Comment from "../models/Comment.js";
+import dotenv from "dotenv";
+dotenv.config();
+
+const router = express.Router();
+
+router.post("/posts", async (req, res) => {
+  try {
+    const post = new Post(req.body);
+    await post.save();
+    res.status(201).send(post);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+router.get("/posts", async (req, res) => {
+  try {
+    const posts = await Post.find().populate("user comments");
+    res.status(200).send(posts);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+router.get("/posts/:id", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).populate("user comments");
+    if (!post) {
+      return res.status(404).send();
+    }
+    res.status(200).send(post);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+router.patch("/posts/:id", async (req, res) => {
+  try {
+    const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+    if (!post) {
+      return res.status(404).send();
+    }
+    res.status(200).send(post);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+router.delete("/posts/:id", async (req, res) => {
+  try {
+    const post = await Post.findByIdAndDelete(req.params.id);
+    if (!post) {
+      return res.status(404).send();
+    }
+    res.status(200).send(post);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+router.post("/posts/:id/like", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).send();
+    }
+    post.likes += 1;
+    await post.save();
+    res.status(200).send(post);
+  } catch (error) {
+    res.status(500).send(error);
+  }
+});
+router.post("/posts/:id/comment", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).send();
+    }
+    const comment = new Comment(req.body);
+    await comment.save();
+    post.comments.push(comment);
+    await post.save();
+    res.status(201).send(post);
+  } catch (error) {
+    res.status(400).send(error);
+  }
+});
+export default router;
