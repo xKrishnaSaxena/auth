@@ -20,7 +20,24 @@ const PostSchema = new mongoose.Schema({
       ref: "Comment",
     },
   ],
-  likes: { type: Number, default: 0 },
+  likes: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+  ],
   photo: { type: String },
 });
+
+PostSchema.virtual("likesCount").get(function () {
+  return this.likes.length;
+});
+
+PostSchema.set("toJSON", {
+  virtuals: true,
+});
+PostSchema.set("toObject", {
+  virtuals: true,
+});
+
 export default mongoose.model("Post", PostSchema);

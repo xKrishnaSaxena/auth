@@ -4,11 +4,12 @@ import Comment from "../models/Comment.js";
 import dotenv from "dotenv";
 import cloudinary from "../config/cloudinary.js";
 import parser from "../config/multer.js";
+import { protect } from "./auth.js";
 dotenv.config();
 
 const router = express.Router();
 
-router.post("/posts", parser.single("photo"), async (req, res) => {
+router.post("/new", protect, parser.single("photo"), async (req, res) => {
   try {
     let postImage = undefined;
     if (req.file) {
@@ -18,7 +19,7 @@ router.post("/posts", parser.single("photo"), async (req, res) => {
     const newPost = await Post.create({
       title: req.body.title,
       content: req.body.content,
-      user: req.body.user,
+      user: req.user._id,
       photo: postImage,
     });
     res.status(201).send(newPost);
@@ -49,40 +50,62 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-router.patch("/:id", async (req, res) => {
+router.patch("/:id", protect, async (req, res) => {
   try {
-    const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
+    const post = await Post.findById(req.params.id);
+    if (!post) {
+      return res.status(404).send({ message: "Post not found" });
+    }
+    if (post.user.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .send({ message: "You are not allowed to update this post" });
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-    if (!post) {
-      return res.status(404).send();
-    }
-    res.status(200).send(post);
+
+    res.status(200).send(updatedPost);
   } catch (error) {
     res.status(400).send(error);
   }
 });
 
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", protect, async (req, res) => {
   try {
-    const post = await Post.findByIdAndDelete(req.params.id);
+    const post = await Post.findById(req.params.id);
     if (!post) {
-      return res.status(404).send();
+      return res.status(404).send({ message: "Post not found" });
     }
-    res.status(200).send(post);
+    if (post.user.toString() !== req.user._id.toString()) {
+      return res
+        .status(403)
+        .send({ message: "You are not allowed to delete this post" });
+    }
+
+    await Post.findByIdAndDelete(req.params.id);
+
+    res.status(200).send({ message: "Post deleted successfully" });
   } catch (error) {
     res.status(500).send(error);
   }
 });
 
-router.post("/:id/like", async (req, res) => {
+router.post("/:id/like", protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).send();
     }
-    post.likes += 1;
+    if (post.likes.includes(req.user._id)) {
+      return res
+        .status(400)
+        .send({ message: "You have already liked this post" });
+    }
+
+    post.likes.push(req.user._id);
     await post.save();
     res.status(200).send(post);
   } catch (error) {
@@ -90,13 +113,16 @@ router.post("/:id/like", async (req, res) => {
   }
 });
 
-router.post("/:id/comment", async (req, res) => {
+router.post("/:id/comment", protect, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
       return res.status(404).send();
     }
-    const comment = new Comment(req.body);
+    const comment = new Comment({
+      ...req.body,
+      user: req.user._id,
+    });
     await comment.save();
     post.comments.push(comment);
     await post.save();
