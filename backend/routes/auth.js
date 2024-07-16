@@ -2,11 +2,69 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+
 import dotenv from "dotenv";
 import { sendResetEmail } from "../config/nodemailer.js";
 dotenv.config();
 
 const router = express.Router();
+
+const signToken = (id) => {
+  return jwt.sign({ id: id }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN,
+  });
+};
+const createSendToken = (user, statusCode, res) => {
+  const token = signToken(user._id);
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+  };
+  if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
+  res.cookie("jwt", token, cookieOptions);
+  user.password = undefined;
+  res.status(statusCode).json({
+    status: "success",
+    token,
+    data: { user },
+  });
+};
+export const protect = async (req, res, next) => {
+  let token;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer")
+  ) {
+    token = req.headers.authorization.split(" ")[1];
+  }
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ status: "fail", message: "You are not logged in" });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentUser = await User.findById(decoded.id);
+
+    if (!currentUser) {
+      return res.status(401).json({
+        status: "fail",
+        message: "The user belonging to this token no longer exists",
+      });
+    }
+
+    req.user = currentUser;
+    next();
+  } catch (err) {
+    return res
+      .status(401)
+      .json({ status: "fail", message: "User not logged in" });
+  }
+};
 
 router.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
@@ -28,7 +86,7 @@ router.post("/register", async (req, res) => {
 
     await user.save();
 
-    res.json({ username, email });
+    createSendToken(user, 201, res);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
@@ -49,11 +107,18 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ msg: "Invalid Credentials" });
     }
 
-    res.json({ username });
+    createSendToken(user, 201, res);
   } catch (err) {
     console.error(err.message);
     res.status(500).send("Server error");
   }
+});
+router.get("/logout", (req, res) => {
+  res.cookie("jwt", "", {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+  });
+  res.status(200).json({ status: "success" });
 });
 
 router.post("/forget-password", async (req, res) => {

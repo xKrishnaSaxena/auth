@@ -28,7 +28,7 @@ router.post("/posts", parser.single("photo"), async (req, res) => {
   }
 });
 
-router.get("/posts", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const posts = await Post.find().populate("user comments");
     res.status(200).send(posts);
@@ -37,7 +37,7 @@ router.get("/posts", async (req, res) => {
   }
 });
 
-router.get("/posts/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id).populate("user comments");
     if (!post) {
@@ -49,7 +49,7 @@ router.get("/posts/:id", async (req, res) => {
   }
 });
 
-router.patch("/posts/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   try {
     const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
@@ -64,7 +64,7 @@ router.patch("/posts/:id", async (req, res) => {
   }
 });
 
-router.delete("/posts/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const post = await Post.findByIdAndDelete(req.params.id);
     if (!post) {
@@ -76,7 +76,7 @@ router.delete("/posts/:id", async (req, res) => {
   }
 });
 
-router.post("/posts/:id/like", async (req, res) => {
+router.post("/:id/like", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {
@@ -90,7 +90,7 @@ router.post("/posts/:id/like", async (req, res) => {
   }
 });
 
-router.post("/posts/:id/comment", async (req, res) => {
+router.post("/:id/comment", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) {

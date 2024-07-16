@@ -2,7 +2,7 @@ import express from "express";
 import connectDB from "./config/db.js";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
-import authRoutes from "./routes/auth.js";
+import authRoutes, { protect } from "./routes/auth.js";
 import postRoutes from "./routes/post.js";
 import cors from "cors";
 
@@ -20,8 +20,8 @@ connectDB();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+app.use("/api/posts", protect, postRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api", postRoutes);
 
 const PORT = process.env.PORT || 5000;
 
