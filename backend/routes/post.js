@@ -2,19 +2,32 @@ import express from "express";
 import Post from "../models/Post.js";
 import Comment from "../models/Comment.js";
 import dotenv from "dotenv";
+import cloudinary from "../config/cloudinary.js";
+import parser from "../config/multer.js";
 dotenv.config();
 
 const router = express.Router();
 
-router.post("/posts", async (req, res) => {
+router.post("/posts", parser.single("photo"), async (req, res) => {
   try {
-    const post = new Post(req.body);
-    await post.save();
-    res.status(201).send(post);
+    let postImage = undefined;
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      postImage = result.secure_url;
+    }
+    const newPost = await Post.create({
+      title: req.body.title,
+      content: req.body.content,
+      user: req.body.user,
+      photo: postImage,
+    });
+    res.status(201).send(newPost);
   } catch (error) {
+    console.error(error);
     res.status(400).send(error);
   }
 });
+
 router.get("/posts", async (req, res) => {
   try {
     const posts = await Post.find().populate("user comments");
@@ -23,6 +36,7 @@ router.get("/posts", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
 router.get("/posts/:id", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id).populate("user comments");
@@ -34,6 +48,7 @@ router.get("/posts/:id", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
 router.patch("/posts/:id", async (req, res) => {
   try {
     const post = await Post.findByIdAndUpdate(req.params.id, req.body, {
@@ -48,6 +63,7 @@ router.patch("/posts/:id", async (req, res) => {
     res.status(400).send(error);
   }
 });
+
 router.delete("/posts/:id", async (req, res) => {
   try {
     const post = await Post.findByIdAndDelete(req.params.id);
@@ -59,6 +75,7 @@ router.delete("/posts/:id", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
 router.post("/posts/:id/like", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -72,6 +89,7 @@ router.post("/posts/:id/like", async (req, res) => {
     res.status(500).send(error);
   }
 });
+
 router.post("/posts/:id/comment", async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
@@ -87,4 +105,5 @@ router.post("/posts/:id/comment", async (req, res) => {
     res.status(400).send(error);
   }
 });
+
 export default router;
